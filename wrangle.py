@@ -34,6 +34,9 @@ def process_entry_v1(entry: Dict) -> List[Sample]:
 
     samples: List[Sample] = []
     for scene in data["scenes"]:
+        if scene["stats"]["result"] != "OK":
+            continue
+
         scene_name = scene["name"]
         render_time_seconds = scene["stats"]["total_render_time"]
         samples.append(
