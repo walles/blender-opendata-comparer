@@ -8,6 +8,9 @@ import traceback
 
 from typing import Dict, NamedTuple, List, Iterable
 
+DEVICE1 = "3500U"
+DEVICE2 = "9750H"
+
 
 class Sample(NamedTuple):
     device_name: str
@@ -221,12 +224,12 @@ with zipfile.ZipFile("opendata-2020-02-21-063254+0000.zip") as opendata:
 
 by_device_and_environment = to_device_and_environment(samples)
 
-# Contender
-d1 = get_device_by_name(by_device_and_environment.keys(), "3500U")
+
+# Find common environments between the two devices to compare
+d1 = get_device_by_name(by_device_and_environment.keys(), DEVICE1)
 environments1 = by_device_and_environment[d1].keys()
 
-# Baseline
-d2 = get_device_by_name(by_device_and_environment.keys(), "4850HQ")
+d2 = get_device_by_name(by_device_and_environment.keys(), DEVICE2)
 environments2 = by_device_and_environment[d2].keys()
 
 common_environments: List[Environment] = []
@@ -238,6 +241,6 @@ for e1 in environments1:
 if not common_environments:
     sys.exit(f"No common environments between:\n* {d1}\n* {d2}")
 
-print(f"Common environments between:\n* {d1}\n* {d2}")
+print(f"Common environments between:\n  {d1}\n  {d2}")
 for environment in common_environments:
-    print(f"  {str(environment)}")
+    print(f"{str(environment)}")
