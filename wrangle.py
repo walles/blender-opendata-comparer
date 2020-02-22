@@ -196,6 +196,21 @@ def to_device_and_environment(
     return by_device_and_environment
 
 
+def get_device_by_name(devices: Iterable[Device], name: str) -> Device:
+    hits: List[Device] = []
+    for device in devices:
+        if name in device.device_name:
+            hits.append(device)
+
+    if len(hits) == 1:
+        return hits[0]
+
+    if not hits:
+        raise LookupError(f"Not found: {name}")
+
+    raise LookupError(f"Multiple hits for {name}: {hits}")
+
+
 samples: List[Sample] = []
 with zipfile.ZipFile("opendata-2020-02-21-063254+0000.zip") as opendata:
     for entry in opendata.infolist():
@@ -206,4 +221,7 @@ with zipfile.ZipFile("opendata-2020-02-21-063254+0000.zip") as opendata:
 
 by_device_and_environment = to_device_and_environment(samples)
 
-pprint.pprint(by_device_and_environment)
+d1 = get_device_by_name(by_device_and_environment.keys(), "3500U")
+pprint.pprint(d1)
+d2 = get_device_by_name(by_device_and_environment.keys(), "4850HQ")
+pprint.pprint(d2)
