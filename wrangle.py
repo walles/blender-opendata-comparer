@@ -14,6 +14,7 @@ class Sample(NamedTuple):
     os_name: str
     device_name: str
     device_type: str
+    device_threads: int
     scene_name: str
     render_time_seconds: float
 
@@ -24,12 +25,46 @@ def process_entry_v1(entry: Dict) -> List[Sample]:
     operating_system = data["system_info"]["system"]
     compute_devices = data["device_info"]["compute_devices"]
     device_type = data["device_info"]["device_type"]
+    num_cpu_threads = data["device_info"]["num_cpu_threads"]
+
     if len(compute_devices) != 1:
         # Multiple compute devices, never mind
         return []
-
     compute_device = compute_devices[0]
-    # FIXME: Look at only CPU devices
+
+    samples: List[Sample] = []
+    for scene in data["scenes"]:
+        if scene["stats"]["result"] != "OK":
+            continue
+
+        scene_name = scene["name"]
+        render_time_seconds = scene["stats"]["total_render_time"]
+        samples.append(
+            Sample(
+                blender_version=blender_version,
+                os_name=operating_system,
+                device_name=compute_device,
+                device_type=device_type,
+                device_threads=num_cpu_threads,
+                scene_name=scene_name,
+                render_time_seconds=render_time_seconds,
+            )
+        )
+    return samples
+
+
+def process_entry_v2(entry: Dict) -> List[Sample]:
+    data = entry["data"]
+    blender_version = data["blender_version"]["version"]
+    operating_system = data["system_info"]["system"]
+    compute_devices = data["device_info"]["compute_devices"]
+    device_type = data["device_info"]["device_type"]
+    num_cpu_threads = data["device_info"]["num_cpu_threads"]
+
+    if len(compute_devices) != 1:
+        # Multiple compute devices or none (?), never mind
+        return []
+    compute_device = compute_devices[0]["name"]
     print(compute_device)
 
     samples: List[Sample] = []
@@ -45,6 +80,7 @@ def process_entry_v1(entry: Dict) -> List[Sample]:
                 os_name=operating_system,
                 device_name=compute_device,
                 device_type=device_type,
+                device_threads=num_cpu_threads,
                 scene_name=scene_name,
                 render_time_seconds=render_time_seconds,
             )
@@ -59,10 +95,12 @@ def process_opendata(jsonl: Iterable[bytes]) -> List[Sample]:
         try:
             if entry["schema_version"] == "v1":
                 samples += process_entry_v1(entry)
+            elif entry["schema_version"] == "v2":
+                samples += process_entry_v2(entry)
             else:
                 pprint.pprint(entry, stream=sys.stderr)
                 sys.exit("Unsupported schema version")
-        except Exception as e:
+        except Exception:
             pprint.pprint(entry, stream=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             sys.exit(1)
