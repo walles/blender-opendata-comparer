@@ -10,13 +10,27 @@ from typing import Dict, NamedTuple, List, Iterable
 
 
 class Sample(NamedTuple):
-    blender_version: str
-    os_name: str
     device_name: str
     device_type: str
     device_threads: int
+
+    blender_version: str
+    os_name: str
     scene_name: str
+
     render_time_seconds: float
+
+
+class Device(NamedTuple):
+    device_name: str
+    device_type: str
+    device_threads: int
+
+
+class Environment(NamedTuple):
+    blender_version: str
+    os_name: str
+    scene_name: str
 
 
 def process_entry_v1(entry: Dict) -> List[Sample]:
@@ -140,6 +154,37 @@ def process_opendata(jsonl: Iterable[bytes]) -> List[Sample]:
     return samples
 
 
+def to_device_and_environment(
+    samples: Iterable[Sample],
+) -> Dict[Device, Dict[Environment, List[float]]]:
+
+    by_device_and_environment: Dict[Device, Dict[Environment, List[float]]] = {}
+
+    for sample in samples:
+        device = Device(
+            device_name=sample.device_name,
+            device_type=sample.device_type,
+            device_threads=sample.device_threads,
+        )
+        environment = Environment(
+            blender_version=sample.blender_version,
+            os_name=sample.os_name,
+            scene_name=sample.scene_name,
+        )
+
+        if device not in by_device_and_environment:
+            by_device_and_environment[device] = {}
+
+        if environment not in by_device_and_environment[device]:
+            by_device_and_environment[device][environment] = []
+
+        by_device_and_environment[device][environment].append(
+            sample.render_time_seconds
+        )
+
+    return by_device_and_environment
+
+
 samples: List[Sample] = []
 with zipfile.ZipFile("opendata-2020-02-21-063254+0000.zip") as opendata:
     for entry in opendata.infolist():
@@ -148,5 +193,6 @@ with zipfile.ZipFile("opendata-2020-02-21-063254+0000.zip") as opendata:
         with opendata.open(entry) as jsonl:
             samples += process_opendata(jsonl.readlines())
 
-for sample in samples:
-    pprint.pprint(sample)
+by_device_and_environment = to_device_and_environment(samples)
+
+pprint.pprint(by_device_and_environment)
