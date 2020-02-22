@@ -44,7 +44,10 @@ def process_entry_v1(entry: Dict) -> List[Sample]:
     if len(compute_devices) != 1:
         # Multiple compute devices, never mind
         return []
-    compute_device = compute_devices[0]
+    device_name = compute_devices[0]
+    if not device_name:
+        # There are a few of these, just ignore them
+        return []
 
     samples: List[Sample] = []
     for scene in data["scenes"]:
@@ -57,7 +60,7 @@ def process_entry_v1(entry: Dict) -> List[Sample]:
             Sample(
                 blender_version=blender_version,
                 os_name=operating_system,
-                device_name=compute_device,
+                device_name=device_name,
                 device_type=device_type,
                 device_threads=num_cpu_threads,
                 scene_name=scene_name,
@@ -71,14 +74,18 @@ def process_entry_v2(entry: Dict) -> List[Sample]:
     data = entry["data"]
     blender_version = data["blender_version"]["version"]
     operating_system = data["system_info"]["system"]
-    compute_devices = data["device_info"]["compute_devices"]
-    device_type = data["device_info"]["device_type"]
-    num_cpu_threads = data["device_info"]["num_cpu_threads"]
 
+    compute_devices = data["device_info"]["compute_devices"]
     if len(compute_devices) != 1:
         # Multiple compute devices or none (?), never mind
         return []
     compute_device = compute_devices[0]["name"]
+    if not compute_device:
+        # There are a few of these, just ignore them
+        return []
+
+    device_type = data["device_info"]["device_type"]
+    num_cpu_threads = data["device_info"]["num_cpu_threads"]
 
     samples: List[Sample] = []
     for scene in data["scenes"]:
@@ -107,9 +114,13 @@ def process_entry_v3(entry: Dict) -> List[Sample]:
         blender_version = data["blender_version"]["version"]
         operating_system = data["system_info"]["system"]
         compute_devices = data["device_info"]["compute_devices"]
-        compute_device = compute_devices[0]["name"]
         if len(compute_devices) != 1:
             # Multiple compute devices or none (?), never mind
+            continue
+
+        device_name = compute_devices[0]["name"]
+        if not device_name:
+            # There are a few of these, just ignore them
             continue
 
         device_type = compute_devices[0]["type"]
@@ -121,7 +132,7 @@ def process_entry_v3(entry: Dict) -> List[Sample]:
             Sample(
                 blender_version=blender_version,
                 os_name=operating_system,
-                device_name=compute_device,
+                device_name=device_name,
                 device_type=device_type,
                 device_threads=num_cpu_threads,
                 scene_name=scene_name,
