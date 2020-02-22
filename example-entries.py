@@ -208,4 +208,111 @@ From an opendata*.zip file, one example per schema_version.
         "id": "fba854a3-93bb-40ca-a53c-db5ac64ebe28",
         "schema_version": "v2",
     },
+    {
+        "created_at": "2020-01-12T17:18:08.843251+00:00",
+        "data": [
+            {
+                "benchmark_launcher": {
+                    "checksum": "b0d4f30cee98825f428ea39b1a486c07c979c31d2eb1016c5e0375335a755a10",
+                    "label": "2.0.3",
+                },
+                "benchmark_script": {
+                    "checksum": "e38921ff7a2959d5e47a83501a2dde3f7f166a4f46b65fac272eec38ae9e5f27",
+                    "label": "2.0.0",
+                },
+                "blender_version": {
+                    "build_commit_date": "2019-12-04",
+                    "build_commit_time": "11:32",
+                    "build_date": "2019-12-04",
+                    "build_hash": "f1aa4d18d49d",
+                    "build_time": "14:33:18",
+                    "checksum": "435b8bde06a14db0f21144f6277e1c70dafc6ea844c434854460c7456b44c251",
+                    "label": "2.81a",
+                    "version": "2.81 (sub 16)",
+                },
+                "device_info": {
+                    "compute_devices": [
+                        {"name": "Intel Core i7-8700B " "CPU @ 3.20GHz", "type": "CPU"}
+                    ],
+                    "device_type": "CPU",
+                    "num_cpu_threads": 12,
+                },
+                "scene": {
+                    "checksum": "bc4fd79cbd85a1cc47926e848ec8f322872f5c170ef33c21e0d0ce303c0ec9ea",
+                    "label": "bmw27",
+                },
+                "stats": {
+                    "device_peak_memory": 140.8,
+                    "render_time_no_sync": 272.193,
+                    "total_render_time": 273.988,
+                },
+                "system_info": {
+                    "bitness": "64bit",
+                    "devices": [
+                        {"name": "Intel Core i7-8700B CPU @ " "3.20GHz", "type": "CPU"}
+                    ],
+                    "dist_name": "",
+                    "dist_version": "",
+                    "machine": "x86_64",
+                    "num_cpu_cores": 6,
+                    "num_cpu_sockets": 1,
+                    "num_cpu_threads": 12,
+                    "system": "Darwin",
+                },
+                "timestamp": "2020-01-12T17:02:06.687281+00:00",
+            },
+            {
+                "benchmark_launcher": {
+                    "checksum": "b0d4f30cee98825f428ea39b1a486c07c979c31d2eb1016c5e0375335a755a10",
+                    "label": "2.0.3",
+                },
+                "benchmark_script": {
+                    "checksum": "e38921ff7a2959d5e47a83501a2dde3f7f166a4f46b65fac272eec38ae9e5f27",
+                    "label": "2.0.0",
+                },
+                "blender_version": {
+                    "build_commit_date": "2019-12-04",
+                    "build_commit_time": "11:32",
+                    "build_date": "2019-12-04",
+                    "build_hash": "f1aa4d18d49d",
+                    "build_time": "14:33:18",
+                    "checksum": "435b8bde06a14db0f21144f6277e1c70dafc6ea844c434854460c7456b44c251",
+                    "label": "2.81a",
+                    "version": "2.81 (sub 16)",
+                },
+                "device_info": {
+                    "compute_devices": [
+                        {"name": "Intel Core i7-8700B " "CPU @ 3.20GHz", "type": "CPU"}
+                    ],
+                    "device_type": "CPU",
+                    "num_cpu_threads": 12,
+                },
+                "scene": {
+                    "checksum": "0089a8807b16e07be5fba59beca64def206249df49c74f7c6aaa15d2e1a483ec",
+                    "label": "classroom",
+                },
+                "stats": {
+                    "device_peak_memory": 282.95,
+                    "render_time_no_sync": 872.109,
+                    "total_render_time": 872.647,
+                },
+                "system_info": {
+                    "bitness": "64bit",
+                    "devices": [
+                        {"name": "Intel Core i7-8700B CPU @ " "3.20GHz", "type": "CPU"}
+                    ],
+                    "dist_name": "",
+                    "dist_version": "",
+                    "machine": "x86_64",
+                    "num_cpu_cores": 6,
+                    "num_cpu_sockets": 1,
+                    "num_cpu_threads": 12,
+                    "system": "Darwin",
+                },
+                "timestamp": "2020-01-12T17:16:54.316628+00:00",
+            },
+        ],
+        "id": "af54997d-f804-419a-80a5-7f1502c8dc79",
+        "schema_version": "v3",
+    },
 ]
