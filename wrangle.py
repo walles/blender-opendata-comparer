@@ -241,6 +241,8 @@ for e1 in environments1:
 if not common_environments:
     sys.exit(f"No common environments between:\n* {d1}\n* {d2}")
 
-print(f"Common environments between:\n  {d1}\n  {d2}")
+print(f"Common environments between:\n  A: {d1}\n  B: {d2}")
 for environment in common_environments:
     print(f"{str(environment)}")
+    print(f"  A: {by_device_and_environment[d1][environment]}")
+    print(f"  B: {by_device_and_environment[d2][environment]}")
