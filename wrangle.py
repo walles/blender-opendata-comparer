@@ -5,6 +5,7 @@ import json
 import pprint
 import zipfile
 import traceback
+import statistics
 
 from typing import Dict, NamedTuple, List, Iterable
 
@@ -244,5 +245,7 @@ if not common_environments:
 print(f"Common environments between:\n  A: {d1}\n  B: {d2}")
 for environment in common_environments:
     print(f"{str(environment)}")
-    print(f"  A: {by_device_and_environment[d1][environment]}")
-    print(f"  B: {by_device_and_environment[d2][environment]}")
+    dt1 = statistics.median(by_device_and_environment[d1][environment])
+    dt2 = statistics.median(by_device_and_environment[d2][environment])
+    print(f"  A: {round(dt1)}s")
+    print(f"  B: {round(dt2)}s")
