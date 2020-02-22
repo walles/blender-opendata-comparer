@@ -10,7 +10,7 @@ import statistics
 from typing import Dict, NamedTuple, List, Iterable
 
 DEVICE1 = "3500U"
-DEVICE2 = "9750H"
+DEVICE2 = "Radeon Vega 8 Mobile"
 
 
 class Sample(NamedTuple):
@@ -212,7 +212,8 @@ def get_device_by_name(devices: Iterable[Device], name: str) -> Device:
     if not hits:
         raise LookupError(f"Not found: {name}")
 
-    raise LookupError(f"Multiple hits for {name}: {hits}")
+    hits_str = "\n  ".join(str(x) for x in hits)
+    raise LookupError(f"Multiple hits for {name}: {hits_str}")
 
 
 samples: List[Sample] = []
