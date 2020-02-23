@@ -248,5 +248,12 @@ for environment in common_environments:
     print(f"{str(environment)}")
     dt1 = statistics.median(by_device_and_environment[d1][environment])
     dt2 = statistics.median(by_device_and_environment[d2][environment])
-    print(f"  A: {round(dt1)}s")
-    print(f"  B: {round(dt2)}s")
+
+    print(f"  A: {dt1:.0f}s")
+    print(f"  B: {dt2:.0f}s")
+
+    factor = dt1 / dt2
+    description = f"A is faster than B by a factor of {factor:.1f}"
+    if factor < 1:
+        description = f"B is faster than A by a factor of {1.0/factor:.1f}"
+    print(f"  {description}")
