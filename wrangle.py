@@ -218,7 +218,7 @@ def get_device_by_name(devices: Iterable[Device], name: str) -> Device:
 
 def geometric_mean(numbers: Iterable[float]) -> float:
     total = 1.0
-    count = 1
+    count = 0
     for number in numbers:
         total *= number
         count += 1
