@@ -200,9 +200,11 @@ def to_device_and_environment(
     return by_device_and_environment
 
 
-def get_device_by_name(devices: Iterable[Device], name: str) -> Device:
+def get_device_by_name(
+    by_device_and_environment: Dict[Device, Dict[Environment, List[float]]], name: str
+) -> Device:
     hits: List[Device] = []
-    for device in devices:
+    for device in by_device_and_environment.keys():
         if name in device.device_name:
             hits.append(device)
 
@@ -212,8 +214,16 @@ def get_device_by_name(devices: Iterable[Device], name: str) -> Device:
     if not hits:
         raise LookupError(f"Not found: {name}")
 
-    hits_str = "\n  ".join(str(x) for x in hits)
-    raise LookupError(f"Multiple hits for {name}:\n  {hits_str}")
+    hits_to_counts: Dict[Device, int] = {}
+    for device in hits:
+        hits_to_counts[device] = len(by_device_and_environment[device])
+
+    hits_str = ""
+    hits = sorted(hits, key=hits_to_counts.get, reverse=True)
+    for device in hits:
+        hits_str += f"\n  {hits_to_counts[device]:3}:{device}"
+
+    raise LookupError(f'Multiple hits for "{name}" (preceded by popularity):{hits_str}')
 
 
 def geometric_mean(numbers: Iterable[float]) -> float:
@@ -238,10 +248,10 @@ by_device_and_environment = to_device_and_environment(samples)
 
 
 # Find common environments between the two devices to compare
-d1 = get_device_by_name(by_device_and_environment.keys(), DEVICE1)
+d1 = get_device_by_name(by_device_and_environment, DEVICE1)
 environments1 = by_device_and_environment[d1].keys()
 
-d2 = get_device_by_name(by_device_and_environment.keys(), DEVICE2)
+d2 = get_device_by_name(by_device_and_environment, DEVICE2)
 environments2 = by_device_and_environment[d2].keys()
 
 common_environments: List[Environment] = []
