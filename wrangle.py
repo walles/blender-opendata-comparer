@@ -275,20 +275,20 @@ for environment in common_environments:
 
     factor = dt1 / dt2
     factors.append(factor)
-    description = f"A is faster than B by a factor of {factor:.1f}"
-    if factor < 1:
-        description = f"B is faster than A by a factor of {1.0/factor:.1f}"
+    description = f"A is faster than B by a factor of {1.0/factor:.1f}"
+    if factor > 1:
+        description = f"B is faster than A by a factor of {factor:.1f}"
     print(f"  {description}")
 
 print("")
 mean_factor = geometric_mean(factors)
-if mean_factor > 1:
-    print("The winner is:")
-    print(f"  {d1}")
-    print("")
-    print(f"It is generally faster by a factor of {mean_factor:.1f}")
+if mean_factor < 1:
+    winner = d1
+    win_factor = 1.0 / mean_factor
 else:
-    print(f"The winner is:")
-    print(f"  {d2}")
-    print("")
-    print(f"It is generally faster by a factor of {1.0/mean_factor:.1f}")
+    winner = d2
+    win_factor = mean_factor
+print(f"The winner is:")
+print(f"  {winner}")
+print("")
+print(f"It is generally faster by a factor of {win_factor:.1f}.")
