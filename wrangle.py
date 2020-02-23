@@ -213,7 +213,7 @@ def get_device_by_name(devices: Iterable[Device], name: str) -> Device:
         raise LookupError(f"Not found: {name}")
 
     hits_str = "\n  ".join(str(x) for x in hits)
-    raise LookupError(f"Multiple hits for {name}: {hits_str}")
+    raise LookupError(f"Multiple hits for {name}:\n  {hits_str}")
 
 
 def geometric_mean(numbers: Iterable[float]) -> float:
