@@ -216,6 +216,16 @@ def get_device_by_name(devices: Iterable[Device], name: str) -> Device:
     raise LookupError(f"Multiple hits for {name}: {hits_str}")
 
 
+def geometric_mean(numbers: Iterable[float]) -> float:
+    total = 1.0
+    count = 1
+    for number in numbers:
+        total *= number
+        count += 1
+
+    return total ** (1.0 / count)
+
+
 samples: List[Sample] = []
 with zipfile.ZipFile("opendata-2020-02-21-063254+0000.zip") as opendata:
     for entry in opendata.infolist():
@@ -244,6 +254,7 @@ if not common_environments:
     sys.exit(f"No common environments between:\n* {d1}\n* {d2}")
 
 print(f"Common environments between:\n  A: {d1}\n  B: {d2}")
+factors: List[float] = []
 for environment in common_environments:
     print(f"{str(environment)}")
     dt1 = statistics.median(by_device_and_environment[d1][environment])
@@ -253,7 +264,21 @@ for environment in common_environments:
     print(f"  B: {dt2:.0f}s")
 
     factor = dt1 / dt2
+    factors.append(factor)
     description = f"A is faster than B by a factor of {factor:.1f}"
     if factor < 1:
         description = f"B is faster than A by a factor of {1.0/factor:.1f}"
     print(f"  {description}")
+
+print("")
+mean_factor = geometric_mean(factors)
+if mean_factor > 1:
+    print("The winner is:")
+    print(f"  {d1}")
+    print("")
+    print(f"It is generally faster by a factor of {mean_factor:.1f}")
+else:
+    print(f"The winner is:")
+    print(f"  {d2}")
+    print("")
+    print(f"It is generally faster by a factor of {1.0/mean_factor:.1f}")
