@@ -10,7 +10,7 @@ import statistics
 from typing import Dict, NamedTuple, List, Iterable
 
 DEVICE1 = "3500U"
-DEVICE2 = "Radeon Vega 8 Mobile"
+DEVICE2 = "4870HQ"
 
 
 class Sample(NamedTuple):
