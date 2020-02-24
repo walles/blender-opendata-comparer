@@ -7,10 +7,15 @@ import zipfile
 import traceback
 import statistics
 
-from typing import Dict, NamedTuple, List, Iterable
+from typing import Dict, NamedTuple, List, Iterable, Optional
 
 DEVICE1 = "3500U"
+DEVICE1_THREADS: Optional[int] = None
+DEVICE1_TYPE: Optional[str] = None
+
 DEVICE2 = "4870HQ"
+DEVICE2_THREADS: Optional[int] = None
+DEVICE2_TYPE: Optional[str] = None
 
 
 class Sample(NamedTuple):
@@ -201,12 +206,25 @@ def to_device_and_environment(
 
 
 def get_device_by_name(
-    by_device_and_environment: Dict[Device, Dict[Environment, List[float]]], name: str
+    by_device_and_environment: Dict[Device, Dict[Environment, List[float]]],
+    name: str,
+    threadcount: Optional[int],
+    device_type: Optional[str],
 ) -> Device:
     hits: List[Device] = []
     for device in by_device_and_environment.keys():
-        if name in device.device_name:
-            hits.append(device)
+        if name not in device.device_name:
+            continue
+
+        if threadcount is not None:
+            if threadcount != device.device_threads:
+                continue
+
+        if device_type is not None:
+            if device_type != device.device_type:
+                continue
+
+        hits.append(device)
 
     if len(hits) == 1:
         return hits[0]
@@ -248,10 +266,14 @@ by_device_and_environment = to_device_and_environment(samples)
 
 
 # Find common environments between the two devices to compare
-d1 = get_device_by_name(by_device_and_environment, DEVICE1)
+d1 = get_device_by_name(
+    by_device_and_environment, DEVICE1, DEVICE1_THREADS, DEVICE1_TYPE
+)
 environments1 = by_device_and_environment[d1].keys()
 
-d2 = get_device_by_name(by_device_and_environment, DEVICE2)
+d2 = get_device_by_name(
+    by_device_and_environment, DEVICE2, DEVICE2_THREADS, DEVICE2_TYPE
+)
 environments2 = by_device_and_environment[d2].keys()
 
 common_environments: List[Environment] = []
