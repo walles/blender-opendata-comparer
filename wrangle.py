@@ -10,12 +10,12 @@ import statistics
 from typing import Dict, NamedTuple, List, Iterable, Optional
 
 # If multiple models match, do specify threads and type to break the ties
-DEVICE1 = "3500U"
-DEVICE1_THREADS: Optional[int] = None
-DEVICE1_TYPE: Optional[str] = None
+DEVICE1 = "2080 Ti"
+DEVICE1_THREADS: Optional[int] = 8
+DEVICE1_TYPE: Optional[str] = "OPTIX"
 
 # If multiple models match, do specify threads and type to break the ties
-DEVICE2 = "4870HQ"
+DEVICE2 = "Threadripper 3970X"
 DEVICE2_THREADS: Optional[int] = None
 DEVICE2_TYPE: Optional[str] = None
 
