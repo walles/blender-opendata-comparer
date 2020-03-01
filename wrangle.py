@@ -271,26 +271,42 @@ by_device_and_environment = to_device_and_environment(samples)
 d1 = get_device_by_name(
     by_device_and_environment, DEVICE1, DEVICE1_THREADS, DEVICE1_TYPE
 )
-environments1 = by_device_and_environment[d1].keys()
 
 d2 = get_device_by_name(
     by_device_and_environment, DEVICE2, DEVICE2_THREADS, DEVICE2_TYPE
 )
+
+print(f"Devices:\n  A: {d1}\n  B: {d2}")
+
+environments1 = by_device_and_environment[d1].keys()
 environments2 = by_device_and_environment[d2].keys()
 
 common_environments: List[Environment] = []
+only_in_1: List[Environment] = []
+only_in_2: List[Environment] = []
 for e1 in environments1:
     if e1 not in environments2:
+        only_in_1.append(e1)
         continue
     common_environments.append(e1)
+for e2 in environments2:
+    if e2 not in environments1:
+        only_in_2.append(e2)
+
+print(f"\nEnvironments for A only:")
+for env in only_in_1:
+    print(f"* {env}")
+
+print(f"\nEnvironments for B only:")
+for env in only_in_2:
+    print(f"* {env}")
 
 if not common_environments:
     sys.exit(f"No common environments between:\n* {d1}\n* {d2}")
 
-print(f"Common environments between:\n  A: {d1}\n  B: {d2}")
 factors: List[float] = []
 for environment in common_environments:
-    print(f"{str(environment)}")
+    print(f"\n{str(environment)}")
     dt1 = statistics.median(by_device_and_environment[d1][environment])
     dt2 = statistics.median(by_device_and_environment[d2][environment])
 
