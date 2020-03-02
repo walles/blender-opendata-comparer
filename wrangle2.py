@@ -10,6 +10,7 @@ from typing import Dict, NamedTuple, List, Iterable, Set
 
 # Make a top list out of these
 DEVICE_NAMES: List[str] = ["4870HQ", "9750H", "Max-Q"]
+MIN_COMMON_SCENES_COUNT = 3
 
 
 class Sample(NamedTuple):
@@ -167,6 +168,77 @@ def process_opendata(jsonl: Iterable[bytes]) -> List[Sample]:
     return samples
 
 
+def get_scene_counts(
+    devices_to_fastest_per_scene: Dict[Device, Dict[str, float]]
+) -> Dict[str, int]:
+    scene_counts: Dict[str, int] = {}
+    for timings in devices_to_fastest_per_scene.values():
+        for scene in timings.keys():
+            scene_counts[scene] = scene_counts.get(scene, 0) + 1
+    return scene_counts
+
+
+def get_all_scenes(devices_to_fastest_per_scene: Dict[Device, Dict[str, float]]) -> set:
+    all_scenes: Set[str] = set()
+    for timings in devices_to_fastest_per_scene.values():
+        all_scenes.update(timings.keys())
+    return all_scenes
+
+
+def censor_uncommon_devices(
+    devices_to_fastest_per_scene: Dict[Device, Dict[str, float]], min_count: int
+) -> None:
+    """
+    For as long as the devices in the dics have less than min_count
+    scenes in common, drop one device at a time.
+
+    This function modifies the dict.
+
+    The scene to drop is picked like this:
+    * Find the most common scenes among the devices
+    * Ignore the scenes that all devices have in common
+    * From the rest, find the most common scene
+    * Drop one device that does not have that most common scene
+    """
+    while True:
+        if len(devices_to_fastest_per_scene) <= 1:
+            sys.exit(
+                f"Unable to find any set of devices with {min_count} scenes in common"
+            )
+
+        scene_counts = get_scene_counts(devices_to_fastest_per_scene)
+        common_scenes: Set[str] = set()
+        for scene, count in scene_counts.items():
+            if count == len(devices_to_fastest_per_scene):
+                common_scenes.add(scene)
+
+        if len(common_scenes) >= min_count:
+            return
+
+        # Ignore the scenes that everybody has in common
+        for scene in common_scenes:
+            del scene_counts[scene]
+
+        assert scene_counts  # If this fails: WTF?
+
+        # Find the most common remaining scene
+        most_common_incomplete_scene = sorted(
+            scene_counts.keys(), key=scene_counts.get
+        )[-1]
+
+        # Find a device that doesn't have that most common scene...
+        for device, timings in devices_to_fastest_per_scene.items():
+            if most_common_incomplete_scene in timings:
+                continue
+
+            # ... and drop it
+            print(
+                f"Dropping {device} lacking timings for {most_common_incomplete_scene}"
+            )
+            del devices_to_fastest_per_scene[device]
+            break
+
+
 # List samples for all devices we're interested in
 samples: List[Sample] = []
 with zipfile.ZipFile("opendata-2020-02-21-063254+0000.zip") as opendata:
@@ -209,31 +281,26 @@ for sample in samples:
         if sample.render_time_seconds < current_best:
             scenes_dict[scene_name] = sample.render_time_seconds
 
+censor_uncommon_devices(devices_to_fastest_per_scene, MIN_COMMON_SCENES_COUNT)
+
 print(f"Found {len(devices_to_fastest_per_scene)} matching devices")
 if not devices_to_fastest_per_scene:
     sys.exit("FAILED: No matching devices")
 
-scene_counts: Dict[str, int] = {}
-for timings in devices_to_fastest_per_scene.values():
-    for scene in timings.keys():
-        scene_counts[scene] = scene_counts.get(scene, 0) + 1
-
+scene_counts = get_scene_counts(devices_to_fastest_per_scene)
 top_scenes: List[str] = sorted(scene_counts.keys(), key=scene_counts.get, reverse=True)
 print("Most common scenes:")
 for scene in top_scenes:
     print(f"{scene_counts[scene]:4d}: {scene}")
 
-# List all known scenes
-all_scenes: Set[str] = set()
-for sample in samples:
-    all_scenes.add(sample.scene_name)
-
 # Figure out which common scenes we have
-common_scenes = set(all_scenes)
+common_scenes = set(get_all_scenes(devices_to_fastest_per_scene))
 for timings in devices_to_fastest_per_scene.values():
     common_scenes.intersection_update(timings.keys())
 
-print(f"Matching devices have {len(common_scenes)}/{len(all_scenes)} scenes in common")
+print(
+    f"Matching devices have {len(common_scenes)}/{len(get_all_scenes(devices_to_fastest_per_scene))} scenes in common"
+)
 if not common_scenes:
     # FIXME: Handle this in a more informative manner
     sys.exit("FAILED: No common scenes")
@@ -252,4 +319,4 @@ top_devices: List[Device] = sorted(
     list(devices_to_total_times.keys()), key=devices_to_total_times.get
 )
 for device in top_devices:
-    print(f"{devices_to_total_times[device]:5d}: {device}")
+    print(f"{devices_to_total_times[device]:5.0f}: {device}")
