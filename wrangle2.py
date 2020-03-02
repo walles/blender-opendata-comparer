@@ -9,7 +9,7 @@ import traceback
 from typing import Dict, NamedTuple, List, Iterable, Set
 
 # Make a top list out of these
-DEVICE_NAMES: List[str] = ["4870HQ", "9750H", "Max-Q"]
+DEVICE_NAMES: List[str] = ["4870HQ", "9750H", "Max-Q", "3500U", "Vega 8 Mobile"]
 MIN_COMMON_SCENES_COUNT = 3
 
 
@@ -239,6 +239,15 @@ def censor_uncommon_devices(
             break
 
 
+def to_duration_string(seconds: float) -> str:
+    seconds_count = int(seconds) % 60
+    minutes_count = (int(seconds) // 60) % 60
+    hours_count = int(seconds) // 3600
+    if hours_count > 0:
+        return f"{hours_count:2d}h{minutes_count:02d}m"
+    return f"{minutes_count:2d}m{seconds_count:02d}s"
+
+
 # List samples for all devices we're interested in
 samples: List[Sample] = []
 with zipfile.ZipFile("opendata-2020-02-21-063254+0000.zip") as opendata:
@@ -289,7 +298,7 @@ if not devices_to_fastest_per_scene:
 
 scene_counts = get_scene_counts(devices_to_fastest_per_scene)
 top_scenes: List[str] = sorted(scene_counts.keys(), key=scene_counts.get, reverse=True)
-print("Most common scenes:")
+print("Most common scenes (with counts):")
 for scene in top_scenes:
     print(f"{scene_counts[scene]:4d}: {scene}")
 
@@ -318,5 +327,9 @@ for device, timings in devices_to_fastest_per_scene.items():
 top_devices: List[Device] = sorted(
     list(devices_to_total_times.keys()), key=devices_to_total_times.get
 )
+
+print("")
+print("List of devices, from fastest to slowest")
 for device in top_devices:
-    print(f"{devices_to_total_times[device]:5.0f}: {device}")
+    duration_string = to_duration_string(devices_to_total_times[device])
+    print(f"{duration_string}: {device}")
