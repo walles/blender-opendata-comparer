@@ -1,21 +1,18 @@
 Given data from <https://opendata.blender.org/snapshots/>,
-figure out which is fastest of:
-
-- AMD Ryzen 5 3500U
-- Radeon Vega 8 Mobile
+figure out which is fastest of some Blender render devices.
 
 Data is taken from the `opendata-*.zip` file.
 
 # Instructions
 
-1. Update `DEVICE1` and `DEVICE2` at the top of [`wrangle.py`](wrangle.py)
+1. Update `DEVICE_NAMES` at the top of [`wrangle.py`](wrangle.py)
 1. `./wrangle.py`
 
 `wrangle.py` will now:
 
-- Figure out which devices you actually mean
-- Find runs that have been done on both devices, with other parameters being the same:
-  - Blender version
-  - OS
-  - Scene name
-- Compare performance of the two devices and print a summary number
+- Find scenes rendered by all these devices
+- Find the fastest render per device and scene
+- Sum these fastest numbers
+
+It will then list all matching devices found, by rendering time, shortest (best)
+first.

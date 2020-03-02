@@ -5,19 +5,12 @@ import json
 import pprint
 import zipfile
 import traceback
-import statistics
 
-from typing import Dict, NamedTuple, List, Iterable, Optional
+from typing import Dict, NamedTuple, List, Iterable, Set
 
-# If multiple models match, do specify threads and type to break the ties
-DEVICE1 = "3500U"
-DEVICE1_THREADS: Optional[int] = None
-DEVICE1_TYPE: Optional[str] = None
-
-# If multiple models match, do specify threads and type to break the ties
-DEVICE2 = "4870HQ"
-DEVICE2_THREADS: Optional[int] = None
-DEVICE2_TYPE: Optional[str] = None
+# Make a top list out of these
+DEVICE_NAMES: List[str] = ["4870HQ", "9750H", "GTX 1650", "3750H", "5500M"]
+MIN_COMMON_SCENES_COUNT = 3
 
 
 class Sample(NamedTuple):
@@ -34,7 +27,6 @@ class Sample(NamedTuple):
 
 class Device(NamedTuple):
     device_name: str
-    device_type: str
     device_threads: int
 
 
@@ -176,159 +168,168 @@ def process_opendata(jsonl: Iterable[bytes]) -> List[Sample]:
     return samples
 
 
-def to_device_and_environment(
-    samples: Iterable[Sample],
-) -> Dict[Device, Dict[Environment, List[float]]]:
-
-    by_device_and_environment: Dict[Device, Dict[Environment, List[float]]] = {}
-
-    for sample in samples:
-        device = Device(
-            device_name=sample.device_name,
-            device_type=sample.device_type,
-            device_threads=sample.device_threads,
-        )
-        environment = Environment(
-            blender_version=sample.blender_version,
-            os_name=sample.os_name,
-            scene_name=sample.scene_name,
-        )
-
-        if device not in by_device_and_environment:
-            by_device_and_environment[device] = {}
-
-        if environment not in by_device_and_environment[device]:
-            by_device_and_environment[device][environment] = []
-
-        by_device_and_environment[device][environment].append(
-            sample.render_time_seconds
-        )
-
-    return by_device_and_environment
+def get_scene_counts(
+    devices_to_fastest_per_scene: Dict[Device, Dict[str, float]]
+) -> Dict[str, int]:
+    scene_counts: Dict[str, int] = {}
+    for timings in devices_to_fastest_per_scene.values():
+        for scene in timings.keys():
+            scene_counts[scene] = scene_counts.get(scene, 0) + 1
+    return scene_counts
 
 
-def get_device_by_name(
-    by_device_and_environment: Dict[Device, Dict[Environment, List[float]]],
-    name: str,
-    threadcount: Optional[int],
-    device_type: Optional[str],
-) -> Device:
-    hits: List[Device] = []
-    for device in by_device_and_environment.keys():
-        if name not in device.device_name:
-            continue
+def get_all_scenes(devices_to_fastest_per_scene: Dict[Device, Dict[str, float]]) -> set:
+    all_scenes: Set[str] = set()
+    for timings in devices_to_fastest_per_scene.values():
+        all_scenes.update(timings.keys())
+    return all_scenes
 
-        if threadcount is not None:
-            if threadcount != device.device_threads:
+
+def censor_uncommon_devices(
+    devices_to_fastest_per_scene: Dict[Device, Dict[str, float]], min_count: int
+) -> None:
+    """
+    For as long as the devices in the dics have less than min_count
+    scenes in common, drop one device at a time.
+
+    This function modifies the dict.
+
+    The scene to drop is picked like this:
+    * Find the most common scenes among the devices
+    * Ignore the scenes that all devices have in common
+    * From the rest, find the most common scene
+    * Drop one device that does not have that most common scene
+    """
+    while True:
+        if len(devices_to_fastest_per_scene) <= 1:
+            sys.exit(
+                f"Unable to find any set of devices with {min_count} scenes in common"
+            )
+
+        scene_counts = get_scene_counts(devices_to_fastest_per_scene)
+        common_scenes: Set[str] = set()
+        for scene, count in scene_counts.items():
+            if count == len(devices_to_fastest_per_scene):
+                common_scenes.add(scene)
+
+        if len(common_scenes) >= min_count:
+            return
+
+        # Ignore the scenes that everybody has in common
+        for scene in common_scenes:
+            del scene_counts[scene]
+
+        assert scene_counts  # If this fails: WTF?
+
+        # Find the most common remaining scene
+        most_common_incomplete_scene = sorted(
+            scene_counts.keys(), key=scene_counts.get
+        )[-1]
+
+        # Find a device that doesn't have that most common scene...
+        for device, timings in devices_to_fastest_per_scene.items():
+            if most_common_incomplete_scene in timings:
                 continue
 
-        if device_type is not None:
-            if device_type != device.device_type:
-                continue
-
-        hits.append(device)
-
-    if len(hits) == 1:
-        return hits[0]
-
-    if not hits:
-        raise LookupError(f"Not found: {name}")
-
-    hits_to_counts: Dict[Device, int] = {}
-    for device in hits:
-        hits_to_counts[device] = len(by_device_and_environment[device])
-
-    hits_str = ""
-    hits = sorted(hits, key=hits_to_counts.get, reverse=True)
-    for device in hits:
-        hits_str += f"\n  {hits_to_counts[device]:3}:{device}"
-
-    raise LookupError(f'Multiple hits for "{name}" (preceded by popularity):{hits_str}')
+            # ... and drop it
+            print(
+                f"Dropping {device} lacking timings for {most_common_incomplete_scene}"
+            )
+            del devices_to_fastest_per_scene[device]
+            break
 
 
-def geometric_mean(numbers: Iterable[float]) -> float:
-    total = 1.0
-    count = 0
-    for number in numbers:
-        total *= number
-        count += 1
+def to_duration_string(seconds: float) -> str:
+    seconds_count = int(seconds) % 60
+    minutes_count = (int(seconds) // 60) % 60
+    hours_count = int(seconds) // 3600
+    if hours_count > 0:
+        return f"{hours_count:2d}h{minutes_count:02d}m"
+    return f"{minutes_count:2d}m{seconds_count:02d}s"
 
-    return total ** (1.0 / count)
 
-
+# List samples for all devices we're interested in
 samples: List[Sample] = []
 with zipfile.ZipFile("opendata-2020-02-21-063254+0000.zip") as opendata:
     for entry in opendata.infolist():
         if not entry.filename.endswith(".jsonl"):
             continue
         with opendata.open(entry) as jsonl:
-            samples += process_opendata(jsonl.readlines())
+            entry_samples = process_opendata(jsonl.readlines())
 
-by_device_and_environment = to_device_and_environment(samples)
+            for sample in entry_samples:
+                # Filter out devices we're interested in
+                match = False
+                for device_name in DEVICE_NAMES:
+                    if device_name in sample.device_name:
+                        match = True
+                if not match:
+                    continue
 
+                samples.append(sample)
 
-# Find common environments between the two devices to compare
-d1 = get_device_by_name(
-    by_device_and_environment, DEVICE1, DEVICE1_THREADS, DEVICE1_TYPE
+print(f"Found {len(samples)} samples for the requested devices")
+
+# Map devices to the fastest recorded rendering per scene
+devices_to_fastest_per_scene: Dict[Device, Dict[str, float]] = {}
+for sample in samples:
+    device = Device(
+        device_name=sample.device_name, device_threads=sample.device_threads,
+    )
+
+    scenes_dict = devices_to_fastest_per_scene.get(device, {})
+    if not scenes_dict:
+        # Not already present, add the new one
+        devices_to_fastest_per_scene[device] = scenes_dict
+
+    scene_name = sample.scene_name
+    if scene_name not in scenes_dict:
+        scenes_dict[scene_name] = sample.render_time_seconds
+    else:
+        current_best = scenes_dict[scene_name]
+        if sample.render_time_seconds < current_best:
+            scenes_dict[scene_name] = sample.render_time_seconds
+
+censor_uncommon_devices(devices_to_fastest_per_scene, MIN_COMMON_SCENES_COUNT)
+
+print(f"Found {len(devices_to_fastest_per_scene)} matching devices")
+if not devices_to_fastest_per_scene:
+    sys.exit("FAILED: No matching devices")
+
+scene_counts = get_scene_counts(devices_to_fastest_per_scene)
+top_scenes: List[str] = sorted(scene_counts.keys(), key=scene_counts.get, reverse=True)
+print("Most common scenes (with counts):")
+for scene in top_scenes:
+    print(f"{scene_counts[scene]:4d}: {scene}")
+
+# Figure out which common scenes we have
+common_scenes = set(get_all_scenes(devices_to_fastest_per_scene))
+for timings in devices_to_fastest_per_scene.values():
+    common_scenes.intersection_update(timings.keys())
+
+print(
+    f"Matching devices have {len(common_scenes)}/{len(get_all_scenes(devices_to_fastest_per_scene))} scenes in common"
+)
+if not common_scenes:
+    # FIXME: Handle this in a more informative manner
+    sys.exit("FAILED: No common scenes")
+
+# For all devices, sum up the common-scene numbers
+# FIXME: Just summing these will give more weight to complex scenes, do we want that?
+devices_to_total_times: Dict[Device, float] = {}
+for device, timings in devices_to_fastest_per_scene.items():
+    sum = 0.0
+    for scene in common_scenes:
+        sum += devices_to_fastest_per_scene[device][scene]
+    devices_to_total_times[device] = sum
+
+# Rank devices per sum-of-common-scenes numbers
+top_devices: List[Device] = sorted(
+    list(devices_to_total_times.keys()), key=devices_to_total_times.get
 )
 
-d2 = get_device_by_name(
-    by_device_and_environment, DEVICE2, DEVICE2_THREADS, DEVICE2_TYPE
-)
-
-print(f"Devices:\n  A: {d1}\n  B: {d2}")
-
-environments1 = by_device_and_environment[d1].keys()
-environments2 = by_device_and_environment[d2].keys()
-
-common_environments: List[Environment] = []
-only_in_1: List[Environment] = []
-only_in_2: List[Environment] = []
-for e1 in environments1:
-    if e1 not in environments2:
-        only_in_1.append(e1)
-        continue
-    common_environments.append(e1)
-for e2 in environments2:
-    if e2 not in environments1:
-        only_in_2.append(e2)
-
-print(f"\nEnvironments for A only:")
-for env in only_in_1:
-    print(f"* {env}")
-
-print(f"\nEnvironments for B only:")
-for env in only_in_2:
-    print(f"* {env}")
-
-if not common_environments:
-    sys.exit(f"No common environments between:\n* {d1}\n* {d2}")
-
-factors: List[float] = []
-for environment in common_environments:
-    print(f"\n{str(environment)}")
-    dt1 = statistics.median(by_device_and_environment[d1][environment])
-    dt2 = statistics.median(by_device_and_environment[d2][environment])
-
-    print(f"  A: {dt1:.0f}s")
-    print(f"  B: {dt2:.0f}s")
-
-    factor = dt1 / dt2
-    factors.append(factor)
-    description = f"A is faster than B by a factor of {1.0/factor:.1f}"
-    if factor > 1:
-        description = f"B is faster than A by a factor of {factor:.1f}"
-    print(f"  {description}")
-
 print("")
-mean_factor = geometric_mean(factors)
-if mean_factor < 1:
-    winner = d1
-    win_factor = 1.0 / mean_factor
-else:
-    winner = d2
-    win_factor = mean_factor
-print(f"The winner is:")
-print(f"  {winner}")
-print("")
-print(f"It is generally faster by a factor of {win_factor:.1f}.")
+print("List of devices, from fastest to slowest")
+for device in top_devices:
+    duration_string = to_duration_string(devices_to_total_times[device])
+    print(f"{duration_string}: {device}")
