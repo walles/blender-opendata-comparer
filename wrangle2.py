@@ -211,7 +211,17 @@ for sample in samples:
 
 print(f"Found {len(devices_to_fastest_per_scene)} matching devices")
 if not devices_to_fastest_per_scene:
-    sys.exit("No matching devices")
+    sys.exit("FAILED: No matching devices")
+
+scene_counts: Dict[str, int] = {}
+for timings in devices_to_fastest_per_scene.values():
+    for scene in timings.keys():
+        scene_counts[scene] = scene_counts.get(scene, 0) + 1
+
+top_scenes: List[str] = sorted(scene_counts.keys(), key=scene_counts.get, reverse=True)
+print("Most common scenes:")
+for scene in top_scenes:
+    print(f"{scene_counts[scene]:4d}: {scene}")
 
 # List all known scenes
 all_scenes: Set[str] = set()
@@ -223,10 +233,10 @@ common_scenes = set(all_scenes)
 for timings in devices_to_fastest_per_scene.values():
     common_scenes.intersection_update(timings.keys())
 
-print(f"Matching devices has {len(common_scenes)}/{len(all_scenes)} scenes in common")
+print(f"Matching devices have {len(common_scenes)}/{len(all_scenes)} scenes in common")
 if not common_scenes:
     # FIXME: Handle this in a more informative manner
-    sys.exit("No common scenes")
+    sys.exit("FAILED: No common scenes")
 
 # For all devices, sum up the common-scene numbers
 # FIXME: Just summing these will give more weight to complex scenes, do we want that?
