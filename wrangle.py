@@ -9,7 +9,14 @@ import traceback
 from typing import Dict, NamedTuple, List, Iterable, Set
 
 # Make a top list out of these
-DEVICE_NAMES: List[str] = ["4870HQ", "9750H", "GTX 1650", "3750H", "5500M"]
+DEVICE_NAMES: List[str] = [
+    "4870HQ",
+    "9750H",
+    "GTX 1650",  # Available in many laptops
+    "3750H",
+    "5500M",
+    "RTX 2060",  # Available in many laptops
+]
 MIN_COMMON_SCENES_COUNT = 3
 
 
@@ -273,9 +280,11 @@ print(f"Found {len(samples)} samples for the requested devices")
 # Map devices to the fastest recorded rendering per scene
 devices_to_fastest_per_scene: Dict[Device, Dict[str, float]] = {}
 for sample in samples:
-    device = Device(
-        device_name=sample.device_name, device_threads=sample.device_threads,
-    )
+    device_threads = sample.device_threads
+    if sample.device_type != "CPU":
+        # The threads is for CPUs only, coalesce GPU devices with different thread counts
+        device_threads = 0
+    device = Device(device_name=sample.device_name, device_threads=device_threads)
 
     scenes_dict = devices_to_fastest_per_scene.get(device, {})
     if not scenes_dict:
