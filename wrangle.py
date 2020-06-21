@@ -10,14 +10,14 @@ from typing import Dict, NamedTuple, List, Iterable, Set
 
 # Make a top list out of these
 DEVICE_NAMES: List[str] = [
-    "4870HQ",
-    "9750H",
-    "GTX 1650",  # Available in many laptops
-    "3750H",
-    "5500M",
-    "RTX 2060",  # Available in many laptops
+    "4850HQ",  # 15" Macbook Pro, late 2013
+    "4800H",  # AMD CPU, comes with some laptops
+    "RTX ",  # Fastest GPUs: https://opendata.blender.org/#fastest-total-median-render-time-gpus-chart
+    "3500U",  # Lenovo Thinkpad E495
+    "10750H",  # Intel CPU, comes with some laptops
+    "9750H",  # Intel CPU, comes with some laptops
 ]
-MIN_COMMON_SCENES_COUNT = 3
+MIN_COMMON_SCENES_COUNT = 5
 
 
 class Sample(NamedTuple):
@@ -257,7 +257,7 @@ def to_duration_string(seconds: float) -> str:
 
 # List samples for all devices we're interested in
 samples: List[Sample] = []
-with zipfile.ZipFile("opendata-2020-02-21-063254+0000.zip") as opendata:
+with zipfile.ZipFile("opendata-2020-06-21.zip") as opendata:
     for entry in opendata.infolist():
         if not entry.filename.endswith(".jsonl"):
             continue
