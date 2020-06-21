@@ -323,14 +323,13 @@ if not common_scenes:
     # FIXME: Handle this in a more informative manner
     sys.exit("FAILED: No common scenes")
 
-# For all devices, sum up the common-scene numbers
-# FIXME: Just summing these will give more weight to complex scenes, do we want that?
+# For all devices, compute the geometric mean of all common-scene numbers
 devices_to_total_times: Dict[Device, float] = {}
 for device, timings in devices_to_fastest_per_scene.items():
-    sum = 0.0
+    product = 1.0
     for scene in common_scenes:
-        sum += devices_to_fastest_per_scene[device][scene]
-    devices_to_total_times[device] = sum
+        product *= devices_to_fastest_per_scene[device][scene]
+    devices_to_total_times[device] = product ** (1.0 / len(common_scenes))
 
 # Rank devices per sum-of-common-scenes numbers
 top_devices: List[Device] = sorted(
