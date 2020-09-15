@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import json
 import pprint
 import zipfile
 import traceback
+import urllib.request as request
 
 from typing import Dict, NamedTuple, List, Iterable, Set
 
@@ -18,6 +20,9 @@ DEVICE_NAMES: List[str] = [
     "9750H",  # Intel CPU, comes with some laptops
 ]
 MIN_COMMON_SCENES_COUNT = 5
+
+
+LOCAL_DATABASE_FILENAME = "/tmp/opendata-latest.zip"
 
 
 class Sample(NamedTuple):
@@ -255,9 +260,22 @@ def to_duration_string(seconds: float) -> str:
     return f"{minutes_count:2d}m{seconds_count:02d}s"
 
 
+def get_zipfile_name() -> str:
+    if os.path.exists(LOCAL_DATABASE_FILENAME):
+        print(f"Database found in {LOCAL_DATABASE_FILENAME}")
+        return LOCAL_DATABASE_FILENAME
+
+    print(f'Downloading performance database into "{LOCAL_DATABASE_FILENAME}"...')
+    request.urlretrieve(
+        "https://opendata.blender.org/snapshots/opendata-latest.zip",
+        LOCAL_DATABASE_FILENAME,
+    )
+    return LOCAL_DATABASE_FILENAME
+
+
 # List samples for all devices we're interested in
 samples: List[Sample] = []
-with zipfile.ZipFile("opendata-2020-06-21.zip") as opendata:
+with zipfile.ZipFile(get_zipfile_name()) as opendata:
     for entry in opendata.infolist():
         if not entry.filename.endswith(".jsonl"):
             continue
