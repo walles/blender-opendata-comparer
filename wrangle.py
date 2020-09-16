@@ -279,6 +279,8 @@ with zipfile.ZipFile(get_zipfile_name()) as opendata:
     for entry in opendata.infolist():
         if not entry.filename.endswith(".jsonl"):
             continue
+        db_size_mb = entry.file_size // (1024 * 1024)
+        print(f"Parsing {db_size_mb}MB database...")
         with opendata.open(entry) as jsonl:
             entry_samples = process_opendata(jsonl.readlines())
 
