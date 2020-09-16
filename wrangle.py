@@ -160,7 +160,9 @@ def process_entry_v3(entry: Dict) -> List[Sample]:
 
 def process_opendata(jsonl: Iterable[bytes]) -> List[Sample]:
     samples: List[Sample] = []
+    line_count = 0
     for line in jsonl:
+        line_count += 1
         entry = json.loads(line)
         try:
             if entry["schema_version"] == "v1":
@@ -177,6 +179,9 @@ def process_opendata(jsonl: Iterable[bytes]) -> List[Sample]:
             traceback.print_exc(file=sys.stderr)
             sys.exit(1)
 
+    print(
+        f"Found {len(samples)} data points in {line_count} lines, at {len(samples)/line_count:.1f} data points per line"
+    )
     return samples
 
 
