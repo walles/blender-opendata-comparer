@@ -256,13 +256,24 @@ def censor_uncommon_devices(
             break
 
 
-def to_duration_string(seconds: float) -> str:
+def seconds_to_string(seconds: float) -> str:
     seconds_count = int(seconds) % 60
     minutes_count = (int(seconds) // 60) % 60
     hours_count = int(seconds) // 3600
     if hours_count > 0:
         return f"{hours_count:2d}h{minutes_count:02d}m"
     return f"{minutes_count:2d}m{seconds_count:02d}s"
+
+
+def to_duration_description(seconds: float, threads: int) -> str:
+    result = seconds_to_string(seconds)
+    if threads > 0:
+        single_core_duration = seconds_to_string(seconds * threads)
+        result += f" (single threaded: {single_core_duration})"
+    else:
+        result += f"                          "
+
+    return result
 
 
 def get_zipfile_name() -> str:
@@ -364,5 +375,6 @@ top_devices: List[Device] = sorted(
 print("")
 print("List of devices, from fastest to slowest")
 for device in top_devices:
-    duration_string = to_duration_string(devices_to_total_times[device])
+    threads = device.device_threads
+    duration_string = to_duration_description(devices_to_total_times[device], threads)
     print(f"{duration_string}: {device}")
