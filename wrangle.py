@@ -8,7 +8,7 @@ import zipfile
 import traceback
 import urllib.request as request
 
-from typing import Dict, NamedTuple, List, Iterable, Set
+from typing import Dict, NamedTuple, List, Iterable, Set, cast
 
 # Make a top list out of these
 DEVICE_NAMES: List[str] = [
@@ -37,9 +37,29 @@ class Sample(NamedTuple):
     render_time_seconds: float
 
 
-class Device(NamedTuple):
-    device_name: str
-    device_threads: int
+class Device:
+    name: str
+    threads: int
+
+    def __init__(self, name: str, threads: int) -> None:
+        self.name = name
+        self.threads = threads
+
+    def __eq__(self, o: object) -> bool:
+        them = cast(Device, o)
+        if self.name.lower() != them.name.lower():
+            return False
+        if self.threads != them.threads:
+            return False
+        return True
+
+    def __hash__(self) -> int:
+        return hash((self.name.lower(), self.threads))
+
+    def __str__(self) -> str:
+        if self.threads:
+            return f"{self.name} ({self.threads} threads)"
+        return self.name
 
 
 class Environment(NamedTuple):
@@ -320,7 +340,7 @@ for sample in samples:
     if sample.device_type != "CPU":
         # The threads is for CPUs only, coalesce GPU devices with different thread counts
         device_threads = 0
-    device = Device(device_name=sample.device_name, device_threads=device_threads)
+    device = Device(name=sample.device_name, threads=device_threads)
 
     scenes_dict = devices_to_fastest_per_scene.get(device, {})
     if not scenes_dict:
@@ -375,6 +395,6 @@ top_devices: List[Device] = sorted(
 print("")
 print("List of devices, from fastest to slowest")
 for device in top_devices:
-    threads = device.device_threads
+    threads = device.threads
     duration_string = to_duration_description(devices_to_total_times[device], threads)
     print(f"{duration_string}: {device}")
