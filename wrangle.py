@@ -320,11 +320,15 @@ with zipfile.ZipFile(get_zipfile_name()) as opendata:
         with opendata.open(entry) as jsonl:
             entry_samples = process_opendata(jsonl.readlines())
 
+            lowercase_device_names = []
+            for device_name in DEVICE_NAMES:
+                lowercase_device_names.append(device_name.lower())
+
             for sample in entry_samples:
                 # Filter out devices we're interested in
                 match = False
-                for device_name in DEVICE_NAMES:
-                    if device_name in sample.device_name:
+                for device_name in lowercase_device_names:
+                    if device_name in sample.device_name.lower():
                         match = True
                 if not match:
                     continue
