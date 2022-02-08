@@ -13,11 +13,10 @@ from typing import Dict, NamedTuple, List, Iterable, Set, cast
 # Make a top list out of these
 DEVICE_NAMES: List[str] = [
     "4850HQ",  # 15" Macbook Pro, late 2013
-    "4800H",  # AMD CPU, comes with some laptops
     "RTX ",  # Fastest GPUs: https://opendata.blender.org/#fastest-total-median-render-time-gpus-chart
     "3500U",  # Lenovo Thinkpad E495
-    "10750H",  # Intel CPU, comes with some laptops
-    "9750H",  # Intel CPU, comes with some laptops
+    "11800H",  # Intel CPU, comes with some laptops
+    "Apple M1",
 ]
 MIN_COMMON_SCENES_COUNT = 5
 
@@ -149,10 +148,16 @@ def process_entry_v3(entry: Dict) -> List[Sample]:
         blender_version = data["blender_version"]["version"]
         operating_system = data["system_info"]["system"]
         compute_devices = data["device_info"]["compute_devices"]
-        if len(compute_devices) != 1:
-            # Multiple compute devices or none (?), never mind
-            continue
 
+        # Apple M1s tend to be listed with four identical entries, handle that
+        # case.
+        device_names = set()
+        for device in compute_devices:
+            device_names.add(device["name"])
+        if len(device_names) != 1:
+            # Multiple different kinds of compute devices or none (?), never
+            # mind
+            continue
         device_name = compute_devices[0]["name"]
         if not device_name:
             # There are a few of these, just ignore them
