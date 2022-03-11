@@ -196,6 +196,11 @@ def process_opendata(jsonl: Iterable[bytes]) -> List[Sample]:
                 samples += process_entry_v2(entry)
             elif entry["schema_version"] == "v3":
                 samples += process_entry_v3(entry)
+            elif entry["schema_version"] == "v4":
+                # Don't know what the difference is between v3 and v4, just use
+                # the v3 parser for both for now until we figure out why we need
+                # a specific one for v4.
+                samples += process_entry_v3(entry)
             else:
                 pprint.pprint(entry, stream=sys.stderr)
                 sys.exit("Unsupported schema version")
