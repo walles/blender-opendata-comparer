@@ -13,6 +13,7 @@ from typing import Dict, NamedTuple, List, Iterable, Set, cast
 # Make a top list out of these
 DEVICE_NAMES: List[str] = [
     "4850HQ",  # 15" Macbook Pro, late 2013
+    "9980HK",  # 15" Macbook Pro, 2019
     "RTX ",  # Fastest GPUs: https://opendata.blender.org/#fastest-total-median-render-time-gpus-chart
     "3500U",  # Lenovo Thinkpad E495
     "11800H",  # Intel CPU, comes with some laptops
