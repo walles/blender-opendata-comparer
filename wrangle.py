@@ -345,8 +345,15 @@ with zipfile.ZipFile(get_zipfile_name()) as opendata:
                     continue
 
                 samples.append(sample)
-
 print(f"Found {len(samples)} samples for the requested devices")
+
+replace_count = 0
+for i, sample in enumerate(samples):
+    normalized_name = sample.device_name.replace("(R)", "").replace("(TM)", "")
+    if normalized_name != sample.device_name:
+        samples[i] = sample._replace(device_name=normalized_name)
+        replace_count += 1
+print(f"Normalized {replace_count} device names")
 
 # Map devices to the fastest recorded rendering per scene
 devices_to_fastest_per_scene: Dict[Device, Dict[str, float]] = {}
