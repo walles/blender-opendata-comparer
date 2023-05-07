@@ -17,7 +17,7 @@ DEVICE_NAMES: List[str] = [
     "RTX ",  # Fastest GPUs: https://opendata.blender.org/#fastest-total-median-render-time-gpus-chart
     "3500U",  # Lenovo Thinkpad E495
     "11800H",  # Intel CPU, comes with some laptops
-    "Apple M1",
+    "Apple M",
 ]
 MIN_COMMON_SCENES_COUNT = 5
 
