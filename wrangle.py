@@ -8,15 +8,16 @@ import zipfile
 import traceback
 from urllib import request
 
-from typing import Dict, NamedTuple, List, Iterable, Set, cast, Tuple
+from typing import Dict, NamedTuple, List, Iterable, Set, cast
 
 # Make a top list out of these
 DEVICE_NAMES: List[str] = [
     "4850HQ",  # 15" Macbook Pro, late 2013
     "9980HK",  # 16" Macbook Pro, 2019
-    "RTX ",  # Fastest GPUs: https://opendata.blender.org/#fastest-total-median-render-time-gpus-chart
+    "5300M",  # 16" Macbook Pro, 2019
+    "5600M",  # 16" Macbook Pro, 2019 (more expensive configuration)
     "3500U",  # Lenovo Thinkpad E495
-    "11800H",  # Intel CPU, comes with some laptops
+    "RTX ",  # Fastest GPUs: https://opendata.blender.org/#fastest-total-median-render-time-gpus-chart
     "Apple M",
 ]
 MIN_COMMON_SCENES_COUNT = 5
