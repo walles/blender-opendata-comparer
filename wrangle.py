@@ -254,7 +254,11 @@ def censor_uncommon_devices(
                 f"Unable to find any set of devices with {min_count} scenes in common"
             )
 
-        scene_counts, common_scenes = get_common_scenes(devices_to_fastest_per_scene)
+        scene_counts = get_scene_counts(devices_to_fastest_per_scene)
+        common_scenes: Set[str] = set()
+        for scene, count in scene_counts.items():
+            if count == len(devices_to_fastest_per_scene):
+                common_scenes.add(scene)
         if len(common_scenes) >= min_count:
             return
 
@@ -280,15 +284,6 @@ def censor_uncommon_devices(
             )
             del devices_to_fastest_per_scene[device]
             break
-
-
-def get_common_scenes(devices_to_fastest_per_scene) -> Tuple[Dict[str, int], Set[str]]:
-    scene_counts = get_scene_counts(devices_to_fastest_per_scene)
-    common_scenes: Set[str] = set()
-    for scene, count in scene_counts.items():
-        if count == len(devices_to_fastest_per_scene):
-            common_scenes.add(scene)
-    return scene_counts, common_scenes
 
 
 def seconds_to_string(seconds: float) -> str:
@@ -384,7 +379,11 @@ def main() -> None:
 
     censor_uncommon_devices(devices_to_fastest_per_scene, MIN_COMMON_SCENES_COUNT)
 
-    _, common_scenes = get_common_scenes(devices_to_fastest_per_scene)
+    # Figure out which common scenes we have
+    common_scenes = set(get_all_scenes(devices_to_fastest_per_scene))
+    for timings in devices_to_fastest_per_scene.values():
+        common_scenes.intersection_update(timings.keys())
+
     print(
         f"Found {len(devices_to_fastest_per_scene)} matching devices with {len(common_scenes)} scenes in common"
     )
@@ -398,11 +397,6 @@ def main() -> None:
     print("Most common scenes (with counts):")
     for scene in top_scenes:
         print(f"{scene_counts[scene]:4d}: {scene}")
-
-    # Figure out which common scenes we have
-    common_scenes = set(get_all_scenes(devices_to_fastest_per_scene))
-    for timings in devices_to_fastest_per_scene.values():
-        common_scenes.intersection_update(timings.keys())
 
     print(
         f"Matching devices have {len(common_scenes)}/{len(get_all_scenes(devices_to_fastest_per_scene))} scenes in common"
