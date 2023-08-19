@@ -6,9 +6,9 @@ import json
 import pprint
 import zipfile
 import traceback
-import urllib.request as request
+from urllib import request
 
-from typing import Dict, NamedTuple, List, Iterable, Set, cast
+from typing import Dict, NamedTuple, List, Iterable, Set, cast, Tuple
 
 # Make a top list out of these
 DEVICE_NAMES: List[str] = [
@@ -254,12 +254,7 @@ def censor_uncommon_devices(
                 f"Unable to find any set of devices with {min_count} scenes in common"
             )
 
-        scene_counts = get_scene_counts(devices_to_fastest_per_scene)
-        common_scenes: Set[str] = set()
-        for scene, count in scene_counts.items():
-            if count == len(devices_to_fastest_per_scene):
-                common_scenes.add(scene)
-
+        scene_counts, common_scenes = get_common_scenes(devices_to_fastest_per_scene)
         if len(common_scenes) >= min_count:
             return
 
@@ -287,6 +282,15 @@ def censor_uncommon_devices(
             break
 
 
+def get_common_scenes(devices_to_fastest_per_scene) -> Tuple[Dict[str, int], Set[str]]:
+    scene_counts = get_scene_counts(devices_to_fastest_per_scene)
+    common_scenes: Set[str] = set()
+    for scene, count in scene_counts.items():
+        if count == len(devices_to_fastest_per_scene):
+            common_scenes.add(scene)
+    return scene_counts, common_scenes
+
+
 def seconds_to_string(seconds: float) -> str:
     seconds_count = int(seconds) % 60
     minutes_count = (int(seconds) // 60) % 60
@@ -302,7 +306,7 @@ def to_duration_description(seconds: float, threads: int) -> str:
         single_core_duration = seconds_to_string(seconds * threads)
         result += f" (single threaded: {single_core_duration})"
     else:
-        result += f"                          "
+        result += "                          "
 
     return result
 
@@ -320,103 +324,113 @@ def get_zipfile_name() -> str:
     return LOCAL_DATABASE_FILENAME
 
 
-# List samples for all devices we're interested in
-samples: List[Sample] = []
-with zipfile.ZipFile(get_zipfile_name()) as opendata:
-    for entry in opendata.infolist():
-        if not entry.filename.endswith(".jsonl"):
-            continue
-        db_size_mb = entry.file_size // (1024 * 1024)
-        print(f"Parsing {db_size_mb}MB database...")
-        with opendata.open(entry) as jsonl:
-            entry_samples = process_opendata(jsonl.readlines())
+def main() -> None:
+    # List samples for all devices we're interested in
+    samples: List[Sample] = []
+    with zipfile.ZipFile(get_zipfile_name()) as opendata:
+        for entry in opendata.infolist():
+            if not entry.filename.endswith(".jsonl"):
+                continue
+            db_size_mb = entry.file_size // (1024 * 1024)
+            print(f"Parsing {db_size_mb}MB database...")
+            with opendata.open(entry) as jsonl:
+                entry_samples = process_opendata(jsonl.readlines())
 
-            lowercase_device_names = []
-            for device_name in DEVICE_NAMES:
-                lowercase_device_names.append(device_name.lower())
+                lowercase_device_names = []
+                for device_name in DEVICE_NAMES:
+                    lowercase_device_names.append(device_name.lower())
 
-            for sample in entry_samples:
-                # Filter out devices we're interested in
-                match = False
-                for device_name in lowercase_device_names:
-                    if device_name in sample.device_name.lower():
-                        match = True
-                if not match:
-                    continue
+                for sample in entry_samples:
+                    # Filter out devices we're interested in
+                    match = False
+                    for device_name in lowercase_device_names:
+                        if device_name in sample.device_name.lower():
+                            match = True
+                    if not match:
+                        continue
 
-                samples.append(sample)
-print(f"Found {len(samples)} samples for the requested devices")
+                    samples.append(sample)
+    print(f"Found {len(samples)} samples for the requested devices")
 
-replace_count = 0
-for i, sample in enumerate(samples):
-    normalized_name = sample.device_name.replace("(R)", "").replace("(TM)", "")
-    if normalized_name != sample.device_name:
-        samples[i] = sample._replace(device_name=normalized_name)
-        replace_count += 1
-print(f"Normalized {replace_count} device names")
+    replace_count = 0
+    for i, sample in enumerate(samples):
+        normalized_name = sample.device_name.replace("(R)", "").replace("(TM)", "")
+        if normalized_name != sample.device_name:
+            samples[i] = sample._replace(device_name=normalized_name)
+            replace_count += 1
+    print(f"Normalized {replace_count} device names")
 
-# Map devices to the fastest recorded rendering per scene
-devices_to_fastest_per_scene: Dict[Device, Dict[str, float]] = {}
-for sample in samples:
-    device_threads = sample.device_threads
-    if sample.device_type != "CPU":
-        # The threads is for CPUs only, coalesce GPU devices with different thread counts
-        device_threads = 0
-    device = Device(name=sample.device_name, threads=device_threads)
+    # Map devices to the fastest recorded rendering per scene
+    devices_to_fastest_per_scene: Dict[Device, Dict[str, float]] = {}
+    for sample in samples:
+        device_threads = sample.device_threads
+        if sample.device_type != "CPU":
+            # The threads is for CPUs only, coalesce GPU devices with different thread counts
+            device_threads = 0
+        device = Device(name=sample.device_name, threads=device_threads)
 
-    scenes_dict = devices_to_fastest_per_scene.get(device, {})
-    if not scenes_dict:
-        # Not already present, add the new one
-        devices_to_fastest_per_scene[device] = scenes_dict
+        scenes_dict = devices_to_fastest_per_scene.get(device, {})
+        if not scenes_dict:
+            # Not already present, add the new one
+            devices_to_fastest_per_scene[device] = scenes_dict
 
-    scene_name = sample.scene_name
-    if scene_name not in scenes_dict:
-        scenes_dict[scene_name] = sample.render_time_seconds
-    else:
-        current_best = scenes_dict[scene_name]
-        if sample.render_time_seconds < current_best:
+        scene_name = sample.scene_name
+        if scene_name not in scenes_dict:
             scenes_dict[scene_name] = sample.render_time_seconds
+        else:
+            current_best = scenes_dict[scene_name]
+            if sample.render_time_seconds < current_best:
+                scenes_dict[scene_name] = sample.render_time_seconds
 
-censor_uncommon_devices(devices_to_fastest_per_scene, MIN_COMMON_SCENES_COUNT)
+    censor_uncommon_devices(devices_to_fastest_per_scene, MIN_COMMON_SCENES_COUNT)
 
-print(f"Found {len(devices_to_fastest_per_scene)} matching devices")
-if not devices_to_fastest_per_scene:
-    sys.exit("FAILED: No matching devices")
+    _, common_scenes = get_common_scenes(devices_to_fastest_per_scene)
+    print(
+        f"Found {len(devices_to_fastest_per_scene)} matching devices with {len(common_scenes)} scenes in common"
+    )
+    if not devices_to_fastest_per_scene:
+        sys.exit("FAILED: No matching devices")
 
-scene_counts = get_scene_counts(devices_to_fastest_per_scene)
-top_scenes: List[str] = sorted(scene_counts.keys(), key=scene_counts.get, reverse=True)
-print("Most common scenes (with counts):")
-for scene in top_scenes:
-    print(f"{scene_counts[scene]:4d}: {scene}")
+    scene_counts = get_scene_counts(devices_to_fastest_per_scene)
+    top_scenes: List[str] = sorted(
+        scene_counts.keys(), key=scene_counts.get, reverse=True
+    )
+    print("Most common scenes (with counts):")
+    for scene in top_scenes:
+        print(f"{scene_counts[scene]:4d}: {scene}")
 
-# Figure out which common scenes we have
-common_scenes = set(get_all_scenes(devices_to_fastest_per_scene))
-for timings in devices_to_fastest_per_scene.values():
-    common_scenes.intersection_update(timings.keys())
+    # Figure out which common scenes we have
+    common_scenes = set(get_all_scenes(devices_to_fastest_per_scene))
+    for timings in devices_to_fastest_per_scene.values():
+        common_scenes.intersection_update(timings.keys())
 
-print(
-    f"Matching devices have {len(common_scenes)}/{len(get_all_scenes(devices_to_fastest_per_scene))} scenes in common"
-)
-if not common_scenes:
-    # FIXME: Handle this in a more informative manner
-    sys.exit("FAILED: No common scenes")
+    print(
+        f"Matching devices have {len(common_scenes)}/{len(get_all_scenes(devices_to_fastest_per_scene))} scenes in common"
+    )
+    if not common_scenes:
+        sys.exit("FAILED: No common scenes")
 
-# For all devices, compute the geometric mean of all common-scene numbers
-devices_to_total_times: Dict[Device, float] = {}
-for device, timings in devices_to_fastest_per_scene.items():
-    product = 1.0
-    for scene in common_scenes:
-        product *= devices_to_fastest_per_scene[device][scene]
-    devices_to_total_times[device] = product ** (1.0 / len(common_scenes))
+    # For all devices, compute the geometric mean of all common-scene numbers
+    devices_to_total_times: Dict[Device, float] = {}
+    for device, timings in devices_to_fastest_per_scene.items():
+        product = 1.0
+        for scene in common_scenes:
+            product *= devices_to_fastest_per_scene[device][scene]
+        devices_to_total_times[device] = product ** (1.0 / len(common_scenes))
 
-# Rank devices per sum-of-common-scenes numbers
-top_devices: List[Device] = sorted(
-    list(devices_to_total_times.keys()), key=devices_to_total_times.get
-)
+    # Rank devices per sum-of-common-scenes numbers
+    top_devices: List[Device] = sorted(
+        list(devices_to_total_times.keys()), key=devices_to_total_times.get
+    )
 
-print("")
-print("List of devices, from fastest to slowest")
-for device in top_devices:
-    threads = device.threads
-    duration_string = to_duration_description(devices_to_total_times[device], threads)
-    print(f"{duration_string}: {device}")
+    print("")
+    print("List of devices, from fastest to slowest")
+    for device in top_devices:
+        threads = device.threads
+        duration_string = to_duration_description(
+            devices_to_total_times[device], threads
+        )
+        print(f"{duration_string}: {device}")
+
+
+main()
