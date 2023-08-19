@@ -349,7 +349,14 @@ def main() -> None:
 
     replace_count = 0
     for i, sample in enumerate(samples):
-        normalized_name = sample.device_name.replace("(R)", "").replace("(TM)", "")
+        # Join and split coalesces consecutive whitespace:
+        # https://stackoverflow.com/a/2077944/473672
+        normalized_name = " ".join(
+            sample.device_name.replace("(R)", "")
+            .replace("(TM)", "")
+            .replace(" Series", "")
+            .split()
+        )
         if normalized_name != sample.device_name:
             samples[i] = sample._replace(device_name=normalized_name)
             replace_count += 1
